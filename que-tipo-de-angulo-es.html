@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Qué tipo de ángulo es?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Paleta del Ministerio de Educación (Manual BA) */
+  :root{
+    --amarillo:#FFCC00;
+    --azul:#153244;
+    --cyan:#8DE2D6;
+    --cyan-osc:#79C7C3;
+    --blanco:#FFFFFF;
+    --gris-osc:#3C3C3B;
+    --gris-claro:#EDEDED;
+    --gris-medio:#B3B3B3;
+    /* Código de colores del Desafío 2 (lápices de los chicos) */
+    --recto:#2E9B4F;
+    --agudo:#2B6CB0;
+    --obtuso:#D64545;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Archivo',system-ui,sans-serif;color:var(--azul);background:var(--blanco);line-height:1.4}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+
+  header.banda{background:var(--cyan);border-radius:0 40px 0 0;padding:22px 24px 20px}
+  header.banda h1{margin:0 0 6px;font-weight:700;font-size:clamp(1.5rem,4vw,2.1rem)}
+  header.banda p{margin:0;font-weight:500;font-size:1.02rem}
+
+  .barra{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 2px 10px}
+  .progreso{font-weight:700;font-size:1rem}
+  .progreso .pista-bar{display:inline-block;vertical-align:middle;width:140px;height:10px;border-radius:999px;background:var(--gris-claro);margin-left:10px;overflow:hidden}
+  .progreso .pista-bar i{display:block;height:100%;width:0;background:var(--cyan-osc);transition:width .4s}
+
+  .mensaje{min-height:56px;border-radius:0 18px 0 0;padding:12px 16px;font-weight:600;font-size:1.02rem;display:flex;align-items:center;gap:10px;background:var(--gris-claro);margin-bottom:14px}
+  .mensaje.pista{background:#FFF4C2;border-left:6px solid var(--amarillo)}
+  .mensaje.bien{background:#E3F7F4;border-left:6px solid var(--cyan-osc)}
+  .mensaje svg{flex:none}
+
+  .mazo{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:14px;border:2px dashed var(--cyan-osc);border-radius:0 24px 0 0;min-height:140px;margin-bottom:18px}
+  .mazo.vacio{align-items:center;color:var(--azul);font-weight:600}
+
+  .tarjeta{font:inherit;width:132px;height:104px;border:2px solid var(--azul);border-radius:0 16px 0 0;background:var(--blanco);color:var(--azul);
+           display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;padding:4px;position:relative;
+           transition:box-shadow .15s, transform .15s}
+  .tarjeta .num{font-size:2.3rem;font-weight:800;letter-spacing:-.5px}
+  .tarjeta svg{width:100%;height:100%}
+  .tarjeta:hover{box-shadow:0 4px 0 var(--cyan-osc)}
+  .tarjeta:focus-visible{outline:4px solid var(--amarillo);outline-offset:2px}
+  .tarjeta.elegida{box-shadow:0 0 0 4px var(--amarillo);transform:translateY(-3px)}
+  .tarjeta.arrastrando{cursor:grabbing;z-index:50;box-shadow:0 10px 24px rgba(21,50,68,.25);transition:none}
+  .tarjeta.ubicada{cursor:default;width:104px;height:80px;border-color:var(--cyan-osc)}
+  .tarjeta.ubicada .num{font-size:1.7rem}
+  .tarjeta.ubicada::after{content:"✓";position:absolute;top:-9px;right:-9px;width:24px;height:24px;border-radius:50%;background:var(--cyan-osc);color:var(--azul);
+           font-weight:800;font-size:.85rem;display:flex;align-items:center;justify-content:center}
+  .tarjeta.error{animation:sacudir .45s}
+  @keyframes sacudir{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+  .grupos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:720px){.grupos{grid-template-columns:1fr}}
+  .grupo{border:2px solid var(--azul);border-radius:0 24px 0 0;min-height:200px;display:flex;flex-direction:column;background:var(--blanco);cursor:pointer;transition:background .15s}
+  .grupo:focus-visible{outline:4px solid var(--amarillo);outline-offset:2px}
+  .grupo.sobre{background:#E3F7F4}
+  .grupo.listo-para-soltar{background:#FFFBEA}
+  .grupo h2{margin:0;padding:12px 16px;font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:10px;border-bottom:2px solid var(--azul);background:var(--cyan);border-radius:0 22px 0 0}
+  .grupo h2 .punto{width:16px;height:16px;border-radius:50%;flex:none;border:2px solid var(--azul)}
+  .grupo .lista{flex:1;display:flex;flex-wrap:wrap;gap:12px;padding:14px;align-content:flex-start;justify-content:center}
+
+  .fin{display:none;text-align:center;padding:22px 16px;margin-top:18px;background:var(--cyan);border-radius:0 32px 0 0}
+  .fin.visible{display:block}
+  .fin h2{margin:0 0 6px;font-size:1.5rem;font-weight:700}
+  .fin p{margin:0 0 14px;font-weight:500}
+
+  .btn{font:inherit;font-weight:700;font-size:1.05rem;background:var(--amarillo);color:var(--azul);border:none;border-radius:999px;padding:12px 26px;cursor:pointer;min-height:48px}
+  .btn:focus-visible{outline:4px solid var(--azul);outline-offset:2px}
+  .btn.sec{background:var(--blanco);border:2px solid var(--azul);font-size:.95rem;padding:8px 18px;min-height:40px}
+
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion:reduce){.tarjeta,.tarjeta.error{transition:none;animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="banda">
+    <h1>¿Qué tipo de ángulo es?</h1>
+    <p>Arrastren cada tarjeta al grupo que corresponda. También pueden tocar una tarjeta y después el grupo.</p>
+  </header>
+
+  <div class="barra">
+    <div class="progreso"><span id="cuenta">0 de 0</span> tarjetas ubicadas<span class="pista-bar"><i id="barra"></i></span></div>
+    <button class="btn sec" id="reiniciar2">Volver a empezar</button>
+  </div>
+
+  <div class="mensaje" id="mensaje" role="status" aria-live="polite">Elijan una tarjeta para empezar.</div>
+
+  <div class="mazo" id="mazo" aria-label="Tarjetas para clasificar"></div>
+
+  <div class="grupos">
+    <section class="grupo" data-cat="agudo" tabindex="0" role="button" aria-label="Grupo ángulo agudo">
+      <h2><span class="punto" style="background:var(--agudo)"></span>Agudo</h2>
+      <div class="lista"></div>
+    </section>
+    <section class="grupo" data-cat="recto" tabindex="0" role="button" aria-label="Grupo ángulo recto">
+      <h2><span class="punto" style="background:var(--recto)"></span>Recto</h2>
+      <div class="lista"></div>
+    </section>
+    <section class="grupo" data-cat="obtuso" tabindex="0" role="button" aria-label="Grupo ángulo obtuso">
+      <h2><span class="punto" style="background:var(--obtuso)"></span>Obtuso</h2>
+      <div class="lista"></div>
+    </section>
+  </div>
+
+  <div class="fin" id="fin">
+    <h2>¡Clasificaron todos los ángulos!</h2>
+    <p>Ahora elijan dos ángulos de su mapa de pliegues y expliquen cómo saben a qué grupo pertenece cada uno.</p>
+    <button class="btn" id="reiniciar">Volver a empezar</button>
+  </div>
+</div>
+
+<script>
+/* ---------- Tarjetas ---------- */
+const PISTAS = {
+  comparar: 'Compárenlo con el ángulo recto: ¿es más cerrado o más abierto?',
+  numero:   'Piensen: ¿mide menos de 90°, exactamente 90° o más de 90°?',
+  exacto:   'Un ángulo recto mide exactamente 90°. ¿Este mide más o menos?',
+  lados:    'Recuerden: lo que importa es cuánto se abren los lados, no qué tan largos son.',
+  girado:   'Aunque esté girado, compárenlo con la esquina de la escuadra.'
+};
+const TARJETAS = [
+  {id:'n30',  tipo:'num', valor:30,  cat:'agudo'},
+  {id:'n45',  tipo:'num', valor:45,  cat:'agudo'},
+  {id:'n89',  tipo:'num', valor:89,  cat:'agudo',  pistaRecto:'exacto'},
+  {id:'n90',  tipo:'num', valor:90,  cat:'recto'},
+  {id:'n91',  tipo:'num', valor:91,  cat:'obtuso', pistaRecto:'exacto'},
+  {id:'n120', tipo:'num', valor:120, cat:'obtuso'},
+  {id:'n150', tipo:'num', valor:150, cat:'obtuso'},
+  {id:'dRecto',  tipo:'dib', grados:90,  giro:-28, lados:[62,62],   cat:'recto',  pista:'girado'},
+  {id:'dLargo',  tipo:'dib', grados:40,  giro:0,   lados:[118,118], cat:'agudo',  pista:'lados'},
+  {id:'dCorto',  tipo:'dib', grados:130, giro:12,  lados:[26,26],   cat:'obtuso', pista:'lados'},
+  {id:'d22',     tipo:'dib', grados:22,  giro:-8,  lados:[100,100], cat:'agudo'},
+  {id:'d112',    tipo:'dib', grados:112, giro:-30, lados:[56,70],   cat:'obtuso'}
+];
+
+/* Dibuja un ángulo en una caja fija de 160 × 110 (sin reescalar, para que el largo de los lados se note). */
+function dibujoAngulo(t){
+  const W=160,H=110, r1=t.giro*Math.PI/180, r2=(t.giro+t.grados)*Math.PI/180;
+  const p1=[t.lados[0]*Math.cos(r1), -t.lados[0]*Math.sin(r1)];
+  const p2=[t.lados[1]*Math.cos(r2), -t.lados[1]*Math.sin(r2)];
+  const xs=[0,p1[0],p2[0]], ys=[0,p1[1],p2[1]];
+  const cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2;
+  const vx=W/2-cx, vy=H/2-cy;
+  const r=Math.min(16, 0.6*Math.min(...t.lados));
+  const a1=[vx+r*Math.cos(r1), vy-r*Math.sin(r1)], a2=[vx+r*Math.cos(r2), vy-r*Math.sin(r2)];
+  const f=n=>n.toFixed(1);
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    <path d="M ${f(vx)} ${f(vy)} L ${f(a1[0])} ${f(a1[1])} A ${f(r)} ${f(r)} 0 0 0 ${f(a2[0])} ${f(a2[1])} Z" fill="var(--cyan)" stroke="var(--cyan-osc)" stroke-width="1.5"/>
+    <line x1="${f(vx)}" y1="${f(vy)}" x2="${f(vx+p1[0])}" y2="${f(vy+p1[1])}" stroke="var(--azul)" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="${f(vx)}" y1="${f(vy)}" x2="${f(vx+p2[0])}" y2="${f(vy+p2[1])}" stroke="var(--azul)" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="${f(vx)}" cy="${f(vy)}" r="4" fill="var(--azul)"/>
+  </svg>`;
+}
+
+function pistaPara(t, cat){
+  if(cat==='recto' && t.pistaRecto) return PISTAS[t.pistaRecto];
+  if(t.pista) return PISTAS[t.pista];
+  return t.tipo==='num' ? PISTAS.numero : PISTAS.comparar;
+}
+
+/* ---------- Estado e interfaz ---------- */
+const mazo=document.getElementById('mazo'), mensaje=document.getElementById('mensaje');
+const grupos=[...document.querySelectorAll('.grupo')];
+let elegida=null, ubicadas=0;
+
+function mezclar(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function decir(txt, tipo){
+  const icono = tipo==='pista'
+    ? '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="10" r="6.5" fill="none" stroke="var(--azul)" stroke-width="2"/><path d="M9.5 19h5M10 21.5h4" stroke="var(--azul)" stroke-width="2" stroke-linecap="round"/></svg>'
+    : tipo==='bien'
+    ? '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--cyan-osc)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="var(--azul)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '';
+  mensaje.className='mensaje'+(tipo?' '+tipo:'');
+  mensaje.innerHTML=icono+'<span>'+txt+'</span>';
+}
+
+function actualizarProgreso(){
+  const n=TARJETAS.length;
+  document.getElementById('cuenta').textContent=`${ubicadas} de ${n}`;
+  document.getElementById('barra').style.width=(100*ubicadas/n)+'%';
+  if(ubicadas===n){
+    mazo.classList.add('vacio'); mazo.textContent='¡No quedan tarjetas!';
+    document.getElementById('fin').classList.add('visible');
+    decir('¡Muy bien! Todas las tarjetas están en su grupo.','bien');
+  }
+}
+
+function elegir(card){
+  if(elegida) elegida.classList.remove('elegida');
+  elegida = (elegida===card) ? null : card;
+  grupos.forEach(g=>g.classList.toggle('listo-para-soltar', !!elegida));
+  if(elegida){ elegida.classList.add('elegida'); decir('Ahora toquen el grupo donde va esta tarjeta.'); }
+}
+
+function ubicar(card, grupo){
+  const t=TARJETAS.find(x=>x.id===card.dataset.id), cat=grupo.dataset.cat;
+  if(elegida){ elegida.classList.remove('elegida'); elegida=null; }
+  grupos.forEach(g=>g.classList.remove('listo-para-soltar'));
+  if(t.cat===cat){
+    card.classList.add('ubicada'); card.disabled=true; card.tabIndex=-1;
+    card.setAttribute('aria-label', card.getAttribute('aria-label')+', ubicada en '+cat);
+    grupo.querySelector('.lista').appendChild(card);
+    ubicadas++;
+    decir('¡Correcto! Sigan con otra tarjeta.','bien');
+    actualizarProgreso();
+  } else {
+    card.classList.remove('error'); void card.offsetWidth; card.classList.add('error');
+    decir(pistaPara(t,cat),'pista');
+  }
+}
+
+function crearTarjeta(t){
+  const b=document.createElement('button');
+  b.className='tarjeta'; b.dataset.id=t.id; b.type='button';
+  if(t.tipo==='num'){ b.innerHTML=`<span class="num">${t.valor}°</span>`; b.setAttribute('aria-label',`Tarjeta: ${t.valor} grados`); }
+  else { b.innerHTML=dibujoAngulo(t); b.setAttribute('aria-label','Tarjeta: dibujo de un ángulo'); }
+
+  let inicio=null, arrastrando=false, evitarClick=false;
+  b.addEventListener('pointerdown',e=>{
+    if(b.disabled) return;
+    inicio={x:e.clientX,y:e.clientY}; arrastrando=false; b.setPointerCapture(e.pointerId);
+  });
+  b.addEventListener('pointermove',e=>{
+    if(!inicio) return;
+    const dx=e.clientX-inicio.x, dy=e.clientY-inicio.y;
+    if(!arrastrando && Math.hypot(dx,dy)>8){ arrastrando=true; b.classList.add('arrastrando'); if(elegida&&elegida!==b) elegir(elegida); }
+    if(arrastrando){
+      b.style.transform=`translate(${dx}px,${dy}px)`;
+      const g=grupoBajo(e.clientX,e.clientY,b);
+      grupos.forEach(x=>x.classList.toggle('sobre',x===g));
+    }
+  });
+  const terminar=e=>{
+    if(!inicio) return;
+    if(arrastrando){
+      const g=grupoBajo(e.clientX,e.clientY,b);
+      b.style.transform=''; b.classList.remove('arrastrando');
+      grupos.forEach(x=>x.classList.remove('sobre'));
+      evitarClick=true;
+      if(g) ubicar(b,g);
+    }
+    inicio=null; arrastrando=false;
+  };
+  b.addEventListener('pointerup',terminar);
+  b.addEventListener('pointercancel',e=>{ b.style.transform=''; b.classList.remove('arrastrando'); grupos.forEach(x=>x.classList.remove('sobre')); inicio=null; arrastrando=false; });
+  b.addEventListener('click',()=>{ if(evitarClick){evitarClick=false;return;} if(!b.disabled) elegir(b); });
+  return b;
+}
+
+function grupoBajo(x,y,card){
+  const vis=card.style.visibility; card.style.visibility='hidden';
+  const el=document.elementFromPoint(x,y); card.style.visibility=vis;
+  return el ? el.closest('.grupo') : null;
+}
+
+grupos.forEach(g=>{
+  const soltar=()=>{ if(elegida) ubicar(elegida,g); };
+  g.addEventListener('click',e=>{ if(e.target.closest('.tarjeta')) return; soltar(); });
+  g.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); soltar(); } });
+});
+
+function iniciar(){
+  elegida=null; ubicadas=0;
+  mazo.classList.remove('vacio'); mazo.innerHTML='';
+  grupos.forEach(g=>{ g.querySelector('.lista').innerHTML=''; g.classList.remove('sobre','listo-para-soltar'); });
+  document.getElementById('fin').classList.remove('visible');
+  mezclar(TARJETAS).forEach(t=>mazo.appendChild(crearTarjeta(t)));
+  decir('Elijan una tarjeta para empezar.');
+  actualizarProgreso();
+}
+document.getElementById('reiniciar').onclick=iniciar;
+document.getElementById('reiniciar2').onclick=iniciar;
+iniciar();
+</script>
+</body>
+</html>
