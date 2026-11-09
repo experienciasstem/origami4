@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Origami Blocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Paleta del Ministerio de Educación (Manual BA) */
+  :root{--amarillo:#FFCC00;--azul:#153244;--cyan:#8DE2D6;--cyan-osc:#79C7C3;--blanco:#FFFFFF;--claro:#E3F7F4;--gris:#EDEDED;--papel:#FFE58A}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Archivo',system-ui,sans-serif;color:var(--azul);background:var(--blanco);line-height:1.35}
+  .wrap{max-width:1040px;margin:0 auto;padding:16px}
+  .grid{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:14px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .panel{border:2px solid var(--azul);border-radius:0 24px 0 0;background:var(--blanco);display:flex;flex-direction:column;min-height:120px}
+  .panel h2{margin:0;padding:11px 16px;font-size:1.15rem;font-weight:700;background:var(--cyan);border-bottom:2px solid var(--azul);border-radius:0 22px 0 0;display:flex;justify-content:space-between;align-items:center}
+  .panel h2 small{font-size:.85rem;font-weight:600}
+  .lista{padding:12px;display:flex;flex-direction:column;gap:8px}
+  .vacio{padding:18px 8px;text-align:center;font-weight:500;color:#4b6170;border:2px dashed var(--cyan-osc);border-radius:0 14px 0 0}
+
+  .bloque{font:inherit;text-align:left;font-weight:600;font-size:.98rem;color:var(--azul);background:var(--blanco);border:2px solid var(--azul);
+          border-radius:0 14px 0 0;padding:10px 12px;cursor:pointer;min-height:48px;display:flex;align-items:center;gap:10px;width:100%}
+  .bloque:hover:not(:disabled){box-shadow:0 3px 0 var(--cyan-osc)}
+  .bloque:focus-visible,.mini:focus-visible,.btn:focus-visible{outline:4px solid var(--amarillo);outline-offset:2px}
+  .bloque:disabled{opacity:.35;cursor:default}
+  .bloque .ico{flex:none;width:66px;height:50px;background:var(--claro);border-radius:0 8px 0 0}
+  .bloque .mas{flex:none;width:26px;height:26px;border-radius:50%;background:var(--amarillo);display:flex;align-items:center;justify-content:center;font-weight:800}
+
+  .paso{display:flex;align-items:stretch;gap:6px}
+  .paso .num{flex:none;width:34px;border-radius:0 10px 0 0;background:var(--azul);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .paso .txt{flex:1;border:2px solid var(--azul);border-radius:0 12px 0 0;padding:8px 10px;font-weight:600;font-size:.95rem;background:var(--blanco);display:flex;align-items:center;transition:background .2s}
+  .paso.activo .txt{background:var(--claro);border-color:var(--cyan-osc)}
+  .paso.ok .txt{background:var(--claro)}
+  .paso.falla .txt{background:#FFF4C2;border-color:var(--amarillo);border-width:3px}
+  .paso .acc{display:flex;flex-direction:column;gap:3px}
+  .mini{font:inherit;width:34px;height:24px;border:2px solid var(--azul);background:var(--blanco);border-radius:6px;cursor:pointer;font-weight:800;font-size:.8rem;line-height:1;color:var(--azul)}
+  .mini:disabled{opacity:.3;cursor:default}
+  .acciones{display:flex;gap:8px;padding:0 12px 12px;flex-wrap:wrap}
+  .btn{font:inherit;font-weight:700;font-size:1.02rem;background:var(--amarillo);color:var(--azul);border:none;border-radius:999px;padding:10px 22px;cursor:pointer;min-height:46px}
+  .btn.sec{background:var(--blanco);border:2px solid var(--azul)}
+  .btn:disabled{opacity:.4;cursor:default}
+
+  .escena{padding:12px;display:flex;flex-direction:column;gap:10px}
+  .escena svg{width:100%;height:auto;background:var(--claro);border-radius:0 16px 0 0}
+  .estado{font-weight:700;text-align:center;min-height:1.4em}
+  .mensaje{border-radius:0 14px 0 0;padding:10px 12px;font-weight:600;background:var(--gris);min-height:64px}
+  .mensaje.error{background:#FFF4C2;border-left:6px solid var(--amarillo)}
+  .mensaje.bien{background:var(--claro);border-left:6px solid var(--cyan-osc)}
+  @media (prefers-reduced-motion:reduce){.paso .txt{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grid">
+    <section class="panel">
+      <h2>Bloques <small>¡Uno no sirve!</small></h2>
+      <div class="lista" id="banco"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Nuestra secuencia <small id="cuenta"></small></h2>
+      <div class="lista" id="secuencia"></div>
+      <div class="acciones">
+        <button class="btn" id="probar">▶ Probar</button>
+        <button class="btn sec" id="borrar">Empezar de nuevo</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>El vaso de papel</h2>
+      <div class="escena">
+        <svg id="dibujo" viewBox="0 0 240 200" role="img" aria-label="Estado del papel"></svg>
+        <div class="estado" id="estado">Así empieza: un papel cuadrado.</div>
+        <div class="mensaje" id="mensaje" role="status" aria-live="polite">Toquen los bloques para armar la secuencia. Después, toquen «Probar».</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ---------- Bloques ---------- */
+const BLOQUES = [
+  {id:'tri',    txt:'Doblá el cuadrado por la diagonal.',                    icono:{tri:true}},
+  {id:'der',    txt:'Llevá la esquina derecha hasta el borde izquierdo.',    icono:{tri:true,der:true}},
+  {id:'izq',    txt:'Llevá la esquina izquierda hasta el borde derecho.',    icono:{tri:true,izq:true}},
+  {id:'puntas', txt:'Bajá las dos puntas de arriba, una de cada lado.',      icono:{tri:true,der:true,izq:true,pf:true,pa:true}},
+  {id:'abr',    txt:'Abrí el vaso apretando los costados.',                  icono:{abierto:true}},
+  {id:'vago',   txt:'Llevá la esquina hacia arriba.',                         icono:{tri:true,vago:true}}
+];
+const porId = Object.fromEntries(BLOQUES.map(b=>[b.id,b]));
+
+/* ---------- Dibujos del papel ---------- */
+const PAPEL='var(--papel)', SOL='#F5C842', AZ='var(--azul)';
+const poly=(pts,fill)=>`<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${fill}" stroke="${AZ}" stroke-width="2.5" stroke-linejoin="round"/>`;
+const A=[30,170],B=[210,170],C=[120,80],Q=[157.3,117.3],P=[82.7,117.3],R=[135.4,170],R2=[104.6,170],T=[120,154.6];
+function dibujo(s){
+  if(s.roto==='mitad') return poly([[45,110],[195,110],[195,170],[45,170]],PAPEL)+alerta();
+  if(s.abierto) return `<path d="M78 70 L162 70 L144 178 L96 178 Z" fill="${PAPEL}" stroke="${AZ}" stroke-width="2.5" stroke-linejoin="round"/>
+     <ellipse cx="120" cy="70" rx="42" ry="11" fill="#fff" stroke="${AZ}" stroke-width="2.5"/>
+     <path d="M96 178 Q120 186 144 178" fill="none" stroke="${AZ}" stroke-width="2.5"/>`+(s.alerta?alerta():'');
+  if(!s.tri) return poly([[50,30],[190,30],[190,170],[50,170]],PAPEL)+(s.alerta?alerta():'');
+  let out='';
+  if(s.der && s.izq){
+    const tope = (s.pf||s.pa) ? [R2,R,Q,P] : [R2,R,Q,C,P];
+    out+=poly(tope,PAPEL)+poly([Q,P,R],SOL)+poly([P,Q,R2],SOL);
+    if(s.pf||s.pa) out+=poly([P,Q,T],SOL);
+  } else if(s.der){
+    out+=poly([A,R,Q,C],PAPEL)+poly([Q,P,R],SOL);
+  } else if(s.izq){
+    out+=poly([R2,B,C,P],PAPEL)+poly([P,Q,R2],SOL);
+  } else {
+    out+=poly([A,B,C],PAPEL);
+  }
+  if(s.vago) out+=`<g transform="rotate(-14 120 120)">${poly([[150,120],[205,95],[175,165]],SOL)}</g>`;
+  return out+(s.alerta?alerta():'');
+}
+function alerta(){
+  return `<g transform="translate(205,32)"><circle r="19" fill="var(--amarillo)" stroke="${AZ}" stroke-width="2.5"/>
+    <text y="8" text-anchor="middle" font-family="Archivo,sans-serif" font-weight="800" font-size="24" fill="${AZ}">!</text></g>`;
+}
+function textoEstado(s){
+  if(s.abierto) return '¡Un vaso de papel!';
+  if(!s.tri) return 'Un papel cuadrado.';
+  if(s.der&&s.izq&&s.pf&&s.pa) return 'Las puntas están dobladas.';
+  if(s.der&&s.izq) return 'Los dos costados están doblados.';
+  if(s.der||s.izq) return 'Un costado doblado.';
+  return 'Un triángulo.';
+}
+
+/* ---------- Estado de la interfaz ---------- */
+let secuencia=[], corriendo=false;
+const $=id=>document.getElementById(id);
+function mezclar(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const ordenBanco = mezclar(BLOQUES.map(b=>b.id));
+
+function decir(t,tipo){ const m=$('mensaje'); m.className='mensaje'+(tipo?' '+tipo:''); m.textContent=t; }
+function mostrarPapel(s){ $('dibujo').innerHTML=dibujo(s); $('estado').textContent=textoEstado(s); }
+
+function render(){
+  $('banco').innerHTML='';
+  ordenBanco.forEach(id=>{
+    const b=document.createElement('button'); b.className='bloque'; b.type='button';
+    b.innerHTML=`<span class="mas" aria-hidden="true">+</span><svg class="ico" viewBox="25 50 190 140" aria-hidden="true">${dibujo(porId[id].icono)}</svg><span>${porId[id].txt}</span>`;
+    b.disabled=secuencia.includes(id)||corriendo;
+    b.setAttribute('aria-label','Agregar a la secuencia: '+porId[id].txt);
+    b.onclick=()=>{ secuencia.push(id); limpiarMarcas(); render(); };
+    $('banco').appendChild(b);
+  });
+  const s=$('secuencia'); s.innerHTML='';
+  if(!secuencia.length){ s.innerHTML='<div class="vacio">Todavía no hay pasos. Toquen un bloque para agregarlo.</div>'; }
+  secuencia.forEach((id,i)=>{
+    const d=document.createElement('div'); d.className='paso'; d.dataset.i=i;
+    d.innerHTML=`<span class="num">${i+1}</span><span class="txt">${porId[id].txt}</span>
+      <span class="acc">
+        <button class="mini" data-a="up" aria-label="Subir el paso ${i+1}" ${i===0||corriendo?'disabled':''}>▲</button>
+        <button class="mini" data-a="down" aria-label="Bajar el paso ${i+1}" ${i===secuencia.length-1||corriendo?'disabled':''}>▼</button>
+        <button class="mini" data-a="del" aria-label="Quitar el paso ${i+1}" ${corriendo?'disabled':''}>✕</button>
+      </span>`;
+    d.querySelectorAll('.mini').forEach(m=>m.onclick=()=>{
+      const a=m.dataset.a;
+      if(a==='up') [secuencia[i-1],secuencia[i]]=[secuencia[i],secuencia[i-1]];
+      if(a==='down') [secuencia[i+1],secuencia[i]]=[secuencia[i],secuencia[i+1]];
+      if(a==='del') secuencia.splice(i,1);
+      limpiarMarcas(); render();
+    });
+    s.appendChild(d);
+  });
+  $('cuenta').textContent=secuencia.length?`${secuencia.length} pasos`:'';
+  $('probar').disabled=corriendo||!secuencia.length;
+  $('borrar').disabled=corriendo;
+}
+function limpiarMarcas(){ mostrarPapel({}); decir('Cuando estén listos, toquen «Probar».'); }
+
+/* ---------- Simulación ---------- */
+function ejecutar(id,s){
+  const n = msg => ({error:msg});
+  switch(id){
+    case 'vago':  s.vago=true; return n('¿Qué esquina? ¿Hasta dónde? La instrucción no lo dice: cada persona la dobla distinto y el vaso sale torcido.');
+    case 'tri':   s.tri=true; return {};
+    case 'der': case 'izq':
+      if(!s.tri) return n('El papel todavía es un cuadrado: no tiene una esquina en ese lugar para llevar hasta el borde.');
+      s[id]=true; return {};
+    case 'puntas':
+      if(!s.tri) return n('El papel todavía es un cuadrado: no hay puntas para bajar.');
+      if(!(s.der&&s.izq)) return n('Al bajar las puntas con un costado todavía abierto, la solapa queda suelta y el vaso no se arma.');
+      s.pf=true; s.pa=true; return {};
+    case 'abr':
+      if(!(s.tri&&s.der&&s.izq&&s.pf&&s.pa)) return n('Si se abre antes de terminar de doblar, las partes quedan sueltas y el vaso se desarma.');
+      s.abierto=true; return {};
+  }
+}
+function faltante(s){
+  if(!s.tri) return 'El papel quedó como un cuadrado: falta un paso al comienzo.';
+  if(!(s.der&&s.izq)) return 'Un costado quedó sin doblar: el vaso no tiene forma. Falta un paso.';
+  if(!(s.pf&&s.pa)) return 'Las puntas quedaron hacia arriba y el vaso no se puede abrir. Falta un paso.';
+  if(!s.abierto) return 'Las instrucciones terminan, pero el vaso quedó cerrado. Falta un paso.';
+  return null;
+}
+const espera=ms=>new Promise(r=>setTimeout(r,matchMedia('(prefers-reduced-motion: reduce)').matches?150:ms));
+
+async function probar(){
+  corriendo=true; render();
+  const s={}; mostrarPapel(s); decir('Probando la secuencia…');
+  const filas=[...document.querySelectorAll('.paso')];
+  await espera(500);
+  for(let i=0;i<secuencia.length;i++){
+    filas.forEach(f=>f.classList.remove('activo')); filas[i].classList.add('activo');
+    const r=ejecutar(secuencia[i],s);
+    if(r.error){
+      s.alerta=true; mostrarPapel(s);
+      filas[i].classList.remove('activo'); filas[i].classList.add('falla');
+      decir(`Problema en el paso ${i+1}: ${r.error}`,'error');
+      corriendo=false; reactivar(); return;
+    }
+    mostrarPapel(s); await espera(950);
+    filas[i].classList.remove('activo'); filas[i].classList.add('ok');
+  }
+  const f=faltante(s);
+  if(f){ s.alerta=true; mostrarPapel(s); decir(f,'error'); }
+  else{
+    const ideal=['tri','der','izq','puntas','abr'];
+    const igual=ideal.every((x,k)=>secuencia[k]===x);
+    decir(igual?'¡El vaso salió! La secuencia funciona.'
+               :'¡El vaso salió! Cambiaron el orden de algunos pasos y aun así funcionó. ¿Por qué será?','bien');
+  }
+  corriendo=false; reactivar();
+}
+function reactivar(){
+  // vuelve a habilitar botones sin borrar las marcas de la prueba
+  document.querySelectorAll('#banco .bloque').forEach((b,k)=>b.disabled=secuencia.includes(ordenBanco[k]));
+  document.querySelectorAll('.paso').forEach((d,i)=>{
+    const [up,down,del]=d.querySelectorAll('.mini');
+    up.disabled=i===0; down.disabled=i===secuencia.length-1; del.disabled=false;
+  });
+  $('probar').disabled=!secuencia.length; $('borrar').disabled=false;
+}
+
+$('probar').onclick=probar;
+$('borrar').onclick=()=>{ secuencia=[]; limpiarMarcas(); decir('Toquen los bloques para armar la secuencia. Después, toquen «Probar».'); render(); };
+mostrarPapel({}); render();
+</script>
+</body>
+</html>
