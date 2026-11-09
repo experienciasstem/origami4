@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lupa de triángulos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Paleta del Ministerio de Educación (Manual BA) */
+  :root{
+    --amarillo:#FFCC00; --azul:#153244; --cyan:#8DE2D6; --cyan-osc:#79C7C3;
+    --blanco:#FFFFFF; --gris-claro:#EDEDED; --relleno:#E3F7F4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Archivo',system-ui,sans-serif;color:var(--azul);background:var(--blanco);line-height:1.4}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+
+  .grupos{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:760px){.grupos{grid-template-columns:1fr}}
+  .grupo{border:2px solid var(--azul);border-radius:0 24px 0 0;background:var(--blanco);display:flex;flex-direction:column}
+  .grupo h2{margin:0;padding:12px 16px;font-size:1.25rem;font-weight:700;background:var(--cyan);border-bottom:2px solid var(--azul);border-radius:0 22px 0 0}
+  .lista{display:flex;flex-direction:column;gap:12px;padding:14px;align-items:center}
+  @media (max-width:760px){.lista{flex-direction:row;flex-wrap:wrap;justify-content:center}}
+
+  .mini{font:inherit;position:relative;width:100%;max-width:220px;aspect-ratio:200/150;border:2px solid var(--azul);border-radius:0 16px 0 0;
+        background:var(--blanco);cursor:pointer;padding:6px;transition:box-shadow .15s, transform .15s}
+  @media (max-width:760px){.mini{width:150px}}
+  .mini:hover{box-shadow:0 4px 0 var(--cyan-osc);transform:translateY(-2px)}
+  .mini:focus-visible{outline:4px solid var(--amarillo);outline-offset:2px}
+  .mini svg{width:100%;height:100%;display:block}
+  .mini .lupa{position:absolute;right:6px;bottom:6px;width:30px;height:30px;border-radius:50%;background:var(--amarillo);display:flex;align-items:center;justify-content:center}
+  .mini.visto{border-color:var(--cyan-osc)}
+
+  dialog{border:none;padding:0;border-radius:0 32px 0 0;max-width:min(680px,94vw);width:100%;color:var(--azul);font-family:inherit}
+  dialog::backdrop{background:rgba(21,50,68,.55)}
+  .dlg-head{background:var(--cyan);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .dlg-head h3{margin:0;font-size:1.3rem;font-weight:700}
+  .dlg-body{padding:12px 18px 6px}
+  .dlg-body svg{width:100%;height:auto;display:block}
+  .leyenda{margin:4px 0 0;font-weight:600;font-size:1rem;text-align:center}
+  .medidas{margin:6px 0 0;text-align:center;font-size:1.05rem;font-weight:500}
+  .dlg-nav{display:flex;justify-content:space-between;gap:10px;padding:12px 18px 18px}
+
+  .btn{font:inherit;font-weight:700;font-size:1rem;background:var(--amarillo);color:var(--azul);border:none;border-radius:999px;padding:10px 22px;cursor:pointer;min-height:46px}
+  .btn.sec{background:var(--blanco);border:2px solid var(--azul)}
+  .btn.cerrar{background:var(--blanco);border:2px solid var(--azul);min-height:40px;padding:6px 16px}
+  .btn:focus-visible{outline:4px solid var(--azul);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.mini{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="grupos" id="grupos"></div>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlgTitulo">
+  <div class="dlg-head">
+    <h3 id="dlgTitulo"></h3>
+    <button class="btn cerrar" id="cerrar" aria-label="Cerrar">Cerrar ✕</button>
+  </div>
+  <div class="dlg-body">
+    <div id="grande"></div>
+    <p class="medidas" id="medidas"></p>
+    <p class="leyenda">Los lados del mismo color miden lo mismo.</p>
+  </div>
+  <div class="dlg-nav">
+    <button class="btn sec" id="ant">← Anterior</button>
+    <button class="btn" id="sig">Siguiente →</button>
+  </div>
+</dialog>
+
+<script>
+/* Lados en cm y giro en grados. */
+const GRUPOS = [
+  {nombre:'Equiláteros', tri:[
+    {l:[4,4,4],       giro:0},
+    {l:[6,6,6],       giro:17},
+    {l:[3,3,3],       giro:-40}
+  ]},
+  {nombre:'Isósceles', tri:[
+    {l:[5,5,3],       giro:8},
+    {l:[4,5.7,4],     giro:180},     /* rectángulo isósceles, como los de la mariposa */
+    {l:[6,2.5,6],     giro:-72}
+  ]},
+  {nombre:'Escalenos', tri:[
+    {l:[3,4,5],       giro:0},
+    {l:[4,5.5,7],     giro:-15},
+    {l:[4,3.1,1.7],   giro:155}      /* parecido a los de la cola de la ballena */
+  ]}
+];
+const COLORES = ['var(--cyan-osc)','var(--amarillo)','#A6A6A6'];
+const TODOS = GRUPOS.flatMap((g,gi)=>g.tri.map((t,ti)=>({...t, grupo:g.nombre, id:`${gi}-${ti}`})));
+
+const fmt = n => (Math.round(n*10)/10).toString().replace('.',',') + ' cm';
+
+/* Vértices a partir de los tres lados (a: AB, b: BC, c: CA). */
+function vertices(t){
+  const [a,b,c]=t.l;
+  const A=[0,0], B=[a,0];
+  const x=(a*a + c*c - b*b)/(2*a), y=-Math.sqrt(Math.max(0,c*c - x*x));
+  const C=[x,y];
+  const g=t.giro*Math.PI/180, cos=Math.cos(g), sin=Math.sin(g);
+  const pts=[A,B,C].map(([px,py])=>[px*cos - py*sin, px*sin + py*cos]);
+  const cx=(pts[0][0]+pts[1][0]+pts[2][0])/3, cy=(pts[0][1]+pts[1][1]+pts[2][1])/3;
+  return pts.map(([px,py])=>[px-cx, py-cy]);
+}
+
+/* Color por longitud: lados iguales, mismo color. */
+function coloresLados(l){
+  const unicos=[...new Set(l.map(v=>v.toFixed(2)))];
+  return l.map(v=>COLORES[unicos.indexOf(v.toFixed(2))]);
+}
+
+function svgMini(t){
+  const s=16, pts=vertices(t).map(([x,y])=>[100+x*s, 75+y*s]);
+  return `<svg viewBox="0 0 200 150" aria-hidden="true">
+    <polygon points="${pts.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="var(--relleno)" stroke="var(--azul)" stroke-width="3" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function svgGrande(t){
+  const v=vertices(t);
+  const xs=v.map(p=>p[0]), ys=v.map(p=>p[1]);
+  const w=Math.max(...xs)-Math.min(...xs), h=Math.max(...ys)-Math.min(...ys);
+  const s=Math.min(400/w, 215/h);
+  const P=v.map(([x,y])=>[310+x*s, 170+y*s]);
+  const col=coloresLados(t.l);
+  const lados=[[0,1],[1,2],[2,0]];
+  const cx=(P[0][0]+P[1][0]+P[2][0])/3, cy=(P[0][1]+P[1][1]+P[2][1])/3;
+  let out=`<polygon points="${P.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="var(--relleno)"/>`;
+  lados.forEach(([i,j],k)=>{
+    out+=`<line x1="${P[i][0].toFixed(1)}" y1="${P[i][1].toFixed(1)}" x2="${P[j][0].toFixed(1)}" y2="${P[j][1].toFixed(1)}" stroke="var(--azul)" stroke-width="13" stroke-linecap="round"/>`;
+    out+=`<line x1="${P[i][0].toFixed(1)}" y1="${P[i][1].toFixed(1)}" x2="${P[j][0].toFixed(1)}" y2="${P[j][1].toFixed(1)}" stroke="${col[k]}" stroke-width="7" stroke-linecap="round"/>`;
+  });
+  P.forEach(p=>out+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="7" fill="var(--azul)"/>`);
+  lados.forEach(([i,j],k)=>{
+    const mx=(P[i][0]+P[j][0])/2, my=(P[i][1]+P[j][1])/2;
+    let dx=mx-cx, dy=my-cy; const d=Math.hypot(dx,dy)||1; dx/=d; dy/=d;
+    const tx=mx+dx*34, ty=my+dy*30, txt=fmt(t.l[k]), wpx=txt.length*11+18;
+    out+=`<rect x="${(tx-wpx/2).toFixed(1)}" y="${(ty-17).toFixed(1)}" width="${wpx}" height="34" rx="17" fill="var(--blanco)" stroke="${col[k]}" stroke-width="4"/>`;
+    out+=`<text x="${tx.toFixed(1)}" y="${(ty+6).toFixed(1)}" text-anchor="middle" font-family="Archivo,system-ui,sans-serif" font-weight="700" font-size="19" fill="var(--azul)">${txt}</text>`;
+  });
+  return `<svg viewBox="0 0 620 340" role="img" aria-label="Triángulo con lados de ${t.l.map(fmt).join(', ')}">${out}</svg>`;
+}
+
+/* Interfaz */
+const cont=document.getElementById('grupos'), dlg=document.getElementById('dlg');
+let actual=0;
+const lupaIcono='<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="#153244" stroke-width="2.6"/><path d="M15 15l6 6" stroke="#153244" stroke-width="2.8" stroke-linecap="round"/></svg>';
+
+GRUPOS.forEach((g,gi)=>{
+  const sec=document.createElement('section'); sec.className='grupo';
+  sec.innerHTML=`<h2>${g.nombre}</h2><div class="lista"></div>`;
+  const lista=sec.querySelector('.lista');
+  g.tri.forEach((t,ti)=>{
+    const b=document.createElement('button'); b.className='mini'; b.type='button';
+    const idx=TODOS.findIndex(x=>x.id===`${gi}-${ti}`);
+    b.dataset.idx=idx;
+    b.setAttribute('aria-label',`Ver de cerca: triángulo ${ti+1} del grupo ${g.nombre}`);
+    b.innerHTML=svgMini(t)+`<span class="lupa">${lupaIcono}</span>`;
+    b.onclick=()=>abrir(idx);
+    lista.appendChild(b);
+  });
+  cont.appendChild(sec);
+});
+
+function mostrar(i){
+  actual=(i+TODOS.length)%TODOS.length;
+  const t=TODOS[actual];
+  document.getElementById('dlgTitulo').textContent=t.grupo;
+  document.getElementById('grande').innerHTML=svgGrande(t);
+  const m3=t.l.map(fmt); document.getElementById('medidas').textContent=`Lados: ${m3[0]}, ${m3[1]} y ${m3[2]}`;
+  const m=document.querySelector(`.mini[data-idx="${actual}"]`); if(m) m.classList.add('visto');
+}
+function abrir(i){ mostrar(i); if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open',''); }
+document.getElementById('cerrar').onclick=()=>dlg.close();
+document.getElementById('ant').onclick=()=>mostrar(actual-1);
+document.getElementById('sig').onclick=()=>mostrar(actual+1);
+dlg.addEventListener('click',e=>{ if(e.target===dlg) dlg.close(); });
+dlg.addEventListener('keydown',e=>{ if(e.key==='ArrowRight') mostrar(actual+1); if(e.key==='ArrowLeft') mostrar(actual-1); });
+</script>
+</body>
+</html>
